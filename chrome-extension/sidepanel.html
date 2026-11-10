@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Darija Translator</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <header>
+    <img src="icons/icon32.png" alt="" width="22" height="22" />
+    <h1>Darija Translator</h1>
+    <button id="settingsBtn" class="icon" title="Settings" aria-label="Settings">⚙</button>
+  </header>
+
+  <section id="settings" class="card hidden" aria-label="Settings">
+    <label>Server URL <input id="serverUrl" type="url" placeholder="http://localhost:8080/translator" /></label>
+    <div class="row">
+      <label>Username <input id="username" autocomplete="username" /></label>
+      <label>Password <input id="password" type="password" autocomplete="current-password" /></label>
+    </div>
+    <label class="check"><input id="liveSelection" type="checkbox" /> Auto-paste text I select on the page</label>
+    <label class="check"><input id="autoSpeak" type="checkbox" /> Read the translation aloud automatically</label>
+    <div class="row">
+      <button id="saveSettings" class="primary">Save</button>
+      <button id="testConn">Test connection</button>
+    </div>
+    <p id="settingsMsg" class="muted"></p>
+  </section>
+
+  <main>
+    <div class="row between">
+      <select id="sourceLang" aria-label="Source language">
+        <option value="auto">Detect language</option>
+        <option value="English">English</option>
+        <option value="French">French</option>
+        <option value="Spanish">Spanish</option>
+        <option value="Modern Standard Arabic">Arabic (MSA)</option>
+      </select>
+      <span class="arrow">→ الدارجة</span>
+    </div>
+
+    <textarea id="input" rows="5" placeholder="Select text on the page, right-click → Translate to Darija, or type here…"></textarea>
+
+    <div class="row">
+      <button id="translateBtn" class="primary grow">Translate <kbd>Ctrl+Enter</kbd></button>
+      <button id="micBtn" class="icon" title="Speak (voice-to-voice translation)" aria-label="Voice input">🎤</button>
+      <button id="clearBtn" class="icon" title="Clear" aria-label="Clear">✕</button>
+    </div>
+    <p id="status" class="muted" role="status"></p>
+
+    <section id="result" class="card hidden" aria-live="polite">
+      <p id="translation" dir="rtl" lang="ar-MA"></p>
+      <p id="transliteration" class="muted"></p>
+      <div class="row">
+        <button id="speakBtn" title="Read aloud">🔊 Read aloud</button>
+        <button id="copyBtn" title="Copy">📋 Copy</button>
+      </div>
+      <p id="meta" class="tiny muted"></p>
+    </section>
+
+    <details id="historyBox">
+      <summary>History</summary>
+      <ul id="history"></ul>
+    </details>
+  </main>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
