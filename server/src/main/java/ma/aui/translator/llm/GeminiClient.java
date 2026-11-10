@@ -21,6 +21,9 @@ import java.time.Duration;
  */
 public class GeminiClient implements LlmClient {
 
+    static final int MAX_RETRIES = 2;
+    static final long RETRY_BACKOFF_MS = 1000;
+
     private final HttpClient http;
     private final String apiKey;
     private final String model;
@@ -60,13 +63,19 @@ public class GeminiClient implements LlmClient {
                 .build();
 
         HttpResponse<String> response;
-        try {
-            response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            throw new LlmException("Cannot reach Gemini: " + e.getMessage(), e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new LlmException("Interrupted while calling Gemini", e);
+        int attempt = 0;
+        while (true) {
+            try {
+                response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                // 500/503 ("model is overloaded") are transient on Gemini: retry with a short backoff.
+                if (!isTransient(response.statusCode()) || attempt >= MAX_RETRIES) break;
+                Thread.sleep(RETRY_BACKOFF_MS * (1L << attempt++));
+            } catch (IOException e) {
+                throw new LlmException("Cannot reach Gemini: " + e.getMessage(), e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new LlmException("Interrupted while calling Gemini", e);
+            }
         }
 
         if (response.statusCode() != 200) {
@@ -100,6 +109,10 @@ public class GeminiClient implements LlmClient {
         } catch (RuntimeException e) {
             throw new LlmException("Unexpected Gemini response: " + abbreviate(json), e);
         }
+    }
+
+    static boolean isTransient(int status) {
+        return status == 500 || status == 503;
     }
 
     private static String abbreviate(String s) {
