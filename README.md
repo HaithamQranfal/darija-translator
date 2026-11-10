@@ -52,7 +52,7 @@ Demo accounts (stored as salted SHA-256 hashes in `server/src/main/resources/use
 
 ## 2. Run the server
 
-**Requirements:** JDK 17+ and Maven 3.9+ (internet access the first time, to download Payara Micro).
+**Requirements:** JDK 17+ (tested up to JDK 25) and Maven 3.9+ (internet access the first time, to download Payara Micro).
 
 ```bash
 cd server
@@ -65,7 +65,7 @@ The WAR runs on **Payara Micro 6**, an embedded Jakarta EE 10 container, at `htt
 
 **Alternatives:**
 
-* Run it manually: `java -jar payara-micro-6.2024.10.jar --deploy target/translator.war --port 8080`
+* Run it manually: `java -jar payara-micro-6.2025.11.jar --deploy target/translator.war --port 8080`
 * Deploy `target/translator.war` to GlassFish 7 or Payara Server 6 from IntelliJ (context root `/translator`).
 
 ### Configuration (environment variables)
@@ -74,7 +74,7 @@ The WAR runs on **Payara Micro 6**, an embedded Jakarta EE 10 container, at `htt
 |---|---|---|
 | `LLM_PROVIDER` | `gemini` | `gemini`, `ollama` (local lightweight LLM) or `mock` (offline demo) |
 | `GEMINI_API_KEY` | – | Google AI Studio key (never commit it) |
-| `GEMINI_MODEL` | `gemini-flash-latest` | Any Gemini model id, e.g. `gemini-2.5-flash` |
+| `GEMINI_MODEL` | `gemini-flash-latest` | Any Gemini model id, e.g. `gemini-3.6-flash` (use a pinned model if `-latest` answers 503 "high demand") |
 | `OLLAMA_URL` / `OLLAMA_MODEL` | `http://localhost:11434` / `qwen2.5:3b` | Local LLM (`ollama pull qwen2.5:3b`) |
 | `TRANSLATOR_USERS` | – | Extra users, e.g. `alice:pass1,bob:pass2` |
 | `CACHE_SIZE`, `MAX_TEXT_LENGTH`, `LLM_TIMEOUT_SECONDS` | 500, 5000, 60 | Tuning |
@@ -89,7 +89,7 @@ curl -u haitham:darija2026 -H "Content-Type: application/json" \
      http://localhost:8080/translator/api/translator/translate
 ```
 
-* `docs/curl-tests.sh` (bash) and `docs/curl-tests.ps1` (Windows) run the full test list, including the 401 and 400 cases.
+* `docs/curl-tests.sh` (bash) and `docs/curl-tests.ps1` (Windows) run the full test list, including the 401 and 400 cases. The PowerShell script checks each status code and exits 1 on failure.
 * Import `docs/postman/DarijaTranslator.postman_collection.json` into Postman: 9 requests with test assertions.
 
 ---
