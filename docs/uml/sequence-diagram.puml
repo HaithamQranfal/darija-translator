@@ -1,0 +1,43 @@
+@startuml sequence-diagram
+title Translate selected text from the Chrome extension
+skinparam shadowing false
+autonumber
+actor User
+participant "Web page\n(content.js)" as Page
+participant "Service worker\n(background.js)" as BG
+participant "Side panel\n(sidepanel.js)" as Panel
+box "Payara Micro (translator.war)" #F5F3FF
+participant "BasicAuthServerAuthModule" as SAM
+participant "TranslatorResource" as Res
+participant "TranslationService" as Svc
+end box
+participant "LlmClient\n(GeminiClient)" as LLM
+participant "Gemini API" as Gemini
+
+User -> Page : select text, right-click\n"Translate to Darija"
+Page -> BG : contextMenus.onClicked(selectionText)
+BG -> Panel : chrome.sidePanel.open()
+BG -> BG : storage.session.set(pendingText)
+Panel -> Panel : paste text into textarea
+Panel -> SAM : POST /api/translator/translate\nAuthorization: Basic aGFpdGhhbTo...
+SAM -> SAM : parseBasic() + CredentialStore.validate()
+alt credentials valid
+  SAM -> SAM : CallerPrincipalCallback +\nGroupPrincipalCallback("translator")
+  SAM -> Res : AuthStatus.SUCCESS -> request continues
+  Res -> Svc : translate(text, "auto")
+  alt cached
+    Svc --> Res : cached LlmResult
+  else not cached
+    Svc -> LLM : complete(systemPrompt, userPrompt)
+    LLM -> Gemini : POST models/gemini-flash-latest:generateContent
+    Gemini --> LLM : {"translation","transliteration","detectedLanguage"}
+    LLM --> Svc : LlmResult
+  end
+  Svc --> Res : TranslationResponse
+  Res --> Panel : 200 OK (JSON)
+  Panel -> User : show Darija + Arabizi,\noptional read aloud (speechSynthesis)
+else invalid / missing credentials
+  SAM --> Panel : 401 Unauthorized\nWWW-Authenticate: Basic realm="DarijaTranslator"
+  Panel -> User : "Wrong username or password"
+end
+@enduml

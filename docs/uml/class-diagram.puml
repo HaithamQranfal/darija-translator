@@ -1,0 +1,208 @@
+@startuml class-diagram
+title Darija Translator - Class Diagram (server: ma.aui.translator)
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #57534E
+  ArrowColor #44403C
+}
+skinparam package {
+  BorderColor #A8A29E
+}
+left to right direction
+
+package "api" #FDF2F2 {
+  class TranslatorApplication <<@ApplicationPath("/api")>> {
+  }
+  class TranslatorResource <<@Path("/translator")>> {
+    ~ service : TranslationService
+    ~ security : SecurityContext
+    + translate(request : TranslationRequest) : TranslationResponse
+    + translatePlain(text : String) : String
+    + translateQuery(text : String, source : String) : TranslationResponse
+    + whoami() : Map<String,Object>
+  }
+  class HealthResource <<@Path("/health")>> {
+    + health() : Map<String,Object>
+  }
+  class CorsFilter <<@Provider>> {
+    + filter(req, res) : void
+  }
+  class ExceptionMappers {
+    {static} ~ json(status, message) : Response
+  }
+  class BadRequestMapper <<@Provider>>
+  class LlmMapper <<@Provider>>
+  class WebAppMapper <<@Provider>>
+  ExceptionMappers +-- BadRequestMapper
+  ExceptionMappers +-- LlmMapper
+  ExceptionMappers +-- WebAppMapper
+}
+
+package "api.dto" #FFFBEB {
+  class TranslationRequest {
+    - text : String
+    - sourceLanguage : String
+  }
+  class TranslationResponse {
+    - original : String
+    - translation : String
+    - transliteration : String
+    - sourceLanguage : String
+    - targetLanguage : String
+    - provider : String
+    - model : String
+    - cached : boolean
+    - durationMs : long
+  }
+  class ErrorResponse {
+    - status : int
+    - error : String
+    - message : String
+  }
+}
+
+package "service" #F0FDF4 {
+  class TranslationService <<@ApplicationScoped>> {
+    - llm : LlmClient
+    - prompts : PromptBuilder
+    - cache : TranslationCache
+    - maxLength : int
+    + translate(text : String, sourceLanguage : String) : TranslationResponse
+    + providerName() : String
+    + modelName() : String
+  }
+  class PromptBuilder {
+    + {static} SYSTEM_PROMPT : String
+    + systemPrompt() : String
+    + userPrompt(text : String, sourceLanguage : String) : String
+  }
+  class TranslationCache {
+    - map : Map<String, LlmResult>
+    - capacity : int
+    + {static} key(text, sourceLanguage) : String
+    + get(key : String) : LlmResult
+    + put(key : String, value : LlmResult) : void
+  }
+}
+
+package "llm" #EFF6FF {
+  interface LlmClient {
+    + complete(systemPrompt : String, userPrompt : String) : LlmResult
+    + providerName() : String
+    + modelName() : String
+  }
+  class GeminiClient {
+    - apiKey : String
+    - model : String
+    - baseUrl : String
+    + complete(...) : LlmResult
+    ~ {static} extractText(json : String) : String
+  }
+  class OllamaClient {
+    - baseUrl : String
+    - model : String
+    + complete(...) : LlmResult
+  }
+  class MockLlmClient {
+    + complete(...) : LlmResult
+  }
+  class LlmClientFactory <<@ApplicationScoped>> {
+    + produce() : LlmClient <<@Produces>>
+    + {static} create(cfg : AppConfig) : LlmClient
+  }
+  class LlmResult <<record>> {
+    translation : String
+    transliteration : String
+    detectedLanguage : String
+  }
+  class LlmResponseParser {
+    ~ {static} parse(modelText : String) : LlmResult
+  }
+  class PromptMarkers {
+    + {static} BEGIN : String
+    + {static} END : String
+    + {static} extract(prompt : String) : String
+  }
+  class LlmException {
+    - upstreamStatus : int
+  }
+}
+
+package "security" #F5F3FF {
+  class AuthModuleRegistrar <<@WebListener>> {
+    + contextInitialized(event) : void
+    + contextDestroyed(event) : void
+  }
+  class BasicAuthServerAuthModule {
+    + {static} REALM : String
+    - store : CredentialStore
+    - handler : CallbackHandler
+    + initialize(...) : void
+    + validateRequest(messageInfo, client, service) : AuthStatus
+    + secureResponse(messageInfo, service) : AuthStatus
+    + cleanSubject(messageInfo, subject) : void
+    ~ {static} parseBasic(header : String) : Optional<String[]>
+  }
+  class CredentialStore {
+    + {static} ROLE : String
+    - users : Map<String,String>
+    + {static} fromConfig() : CredentialStore
+    + validate(user, password) : Optional<List<String>>
+  }
+  class PasswordHasher <<utility>> {
+    + {static} hash(password) : String
+    + {static} verify(password, stored) : boolean
+  }
+}
+
+package "config" #F8FAFC {
+  class AppConfig <<singleton>> {
+    + {static} get() : AppConfig
+    + get(key, fallback) : String
+    + getInt(key, fallback) : int
+  }
+}
+
+interface "jakarta.ws.rs.core.Application" as JaxApp
+interface "jakarta.security.auth.message.module.ServerAuthModule" as SAM
+interface "jakarta.servlet.ServletContextListener" as SCL
+interface "jakarta.ws.rs.container.ContainerResponseFilter" as CRF
+
+JaxApp <|-- TranslatorApplication
+SAM <|.. BasicAuthServerAuthModule
+SCL <|.. AuthModuleRegistrar
+CRF <|.. CorsFilter
+
+TranslatorResource --> TranslationService : @Inject
+HealthResource --> TranslationService : @Inject
+TranslatorResource ..> TranslationRequest : consumes
+TranslatorResource ..> TranslationResponse : produces
+ExceptionMappers ..> ErrorResponse
+
+TranslationService o--> LlmClient
+TranslationService *--> PromptBuilder
+TranslationService *--> TranslationCache
+TranslationService ..> TranslationResponse : creates
+TranslationCache o--> LlmResult
+
+LlmClient <|.. GeminiClient
+LlmClient <|.. OllamaClient
+LlmClient <|.. MockLlmClient
+LlmClientFactory ..> LlmClient : produces
+LlmClientFactory ..> AppConfig
+LlmClient ..> LlmResult
+GeminiClient ..> LlmResponseParser
+OllamaClient ..> LlmResponseParser
+GeminiClient ..> LlmException : throws
+PromptBuilder ..> PromptMarkers
+MockLlmClient ..> PromptMarkers
+LlmMapper ..> LlmException
+
+AuthModuleRegistrar ..> BasicAuthServerAuthModule : registers via\nAuthConfigFactory
+BasicAuthServerAuthModule --> CredentialStore
+CredentialStore ..> PasswordHasher
+CredentialStore ..> AppConfig
+@enduml

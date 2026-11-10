@@ -1,0 +1,60 @@
+@startuml deployment-diagram
+title Darija Translator - Deployment Diagram
+skinparam shadowing false
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #44403C
+}
+skinparam artifact {
+  BackgroundColor #FEF3C7
+}
+skinparam component {
+  BackgroundColor #ECFDF5
+}
+
+node "Developer PC / Server\n<<device>>\nWindows / Linux" as server {
+  node "JVM 17+\n<<execution environment>>" as jvm {
+    node "Payara Micro 6 (embedded Jakarta EE 10 container)\n<<execution environment>>\n:8080" as payara {
+      artifact "translator.war" as war {
+        component "BasicAuthServerAuthModule\n(Jakarta Authentication)" as sam
+        component "TranslatorResource\n(Jakarta REST)" as res
+        component "TranslationService\n+ LlmClient" as svc
+      }
+    }
+  }
+  node "Ollama runtime (optional)\n<<execution environment>>\n:11434" as ollama {
+    artifact "qwen2.5:3b\n(lightweight LLM)" as qwen
+  }
+}
+
+cloud "Google Cloud\n<<device>>" as google {
+  node "Gemini API\ngenerativelanguage.googleapis.com" as gemini
+}
+
+node "User's PC\n<<device>>" as pc {
+  node "Google Chrome\n<<execution environment>>" as chrome {
+    artifact "Darija Translator extension\n(Manifest V3, side panel)" as ext
+  }
+  node "PHP 8 built-in server\n<<execution environment>>" as php {
+    artifact "php-client (index.php)" as phpapp
+  }
+  node "Python 3\n<<execution environment>>" as py {
+    artifact "translator_client.py / gui_app.py" as pyapp
+  }
+}
+
+node "Smartphone (Android / iOS)\n<<device>>" as phone {
+  node "Expo Go / React Native runtime\n<<execution environment>>" as rn {
+    artifact "mobile-app (App.js)" as rnapp
+  }
+}
+
+sam -down-> res
+res -down-> svc
+ext --> payara : HTTP/JSON + Basic auth\nPOST /translator/api/translator/translate
+phpapp --> payara : HTTP/JSON (cURL)
+pyapp --> payara : HTTP/JSON (urllib)
+rnapp --> payara : HTTP/JSON over Wi-Fi LAN\n(http://<PC-IP>:8080)
+svc --> gemini : HTTPS REST\nx-goog-api-key
+svc ..> ollama : HTTP (local)\nLLM_PROVIDER=ollama
+@enduml
