@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Darija Translator API</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 16px;color:#1f2937}
+    code,pre{background:#f3f4f6;border-radius:6px;padding:2px 6px}
+    pre{padding:12px;overflow:auto}
+    h1{color:#c1272d}
+  </style>
+</head>
+<body>
+<h1>Darija Translator &mdash; REST API</h1>
+<p>LLM-powered RESTful web service (Jakarta REST + Jakarta Authentication) translating text to Moroccan Arabic (Darija).</p>
+<ul>
+  <li><code>GET  api/health</code> &mdash; public</li>
+  <li><code>POST api/translator/translate</code> &mdash; HTTP Basic auth, JSON <code>{"text":"..."}</code></li>
+  <li><code>GET  api/translator/translate?text=...</code> &mdash; HTTP Basic auth</li>
+  <li><code>GET  api/translator/whoami</code> &mdash; HTTP Basic auth</li>
+</ul>
+<pre>curl -u haitham:darija2026 -H "Content-Type: application/json" \
+  -d '{"text":"How are you today?"}' \
+  http://localhost:8080/translator/api/translator/translate</pre>
+</body>
+</html>
