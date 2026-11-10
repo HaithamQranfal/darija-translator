@@ -1,0 +1,3 @@
+# The client itself only uses the Python standard library.
+# Optional: offline text-to-speech in the GUI
+pyttsx3>=2.90
