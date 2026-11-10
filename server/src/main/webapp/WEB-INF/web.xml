@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+    <display-name>Darija Translator</display-name>
+
+    <!-- The translator endpoint requires an authenticated caller in role "translator".
+         Authentication itself is performed by the Jakarta Authentication module
+         ma.aui.translator.security.BasicAuthServerAuthModule (registered by AuthModuleRegistrar). -->
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>TranslatorResource</web-resource-name>
+            <url-pattern>/api/translator/*</url-pattern>
+            <http-method-omission>OPTIONS</http-method-omission>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>translator</role-name>
+        </auth-constraint>
+    </security-constraint>
+
+    <security-role>
+        <role-name>translator</role-name>
+    </security-role>
+
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+</web-app>
